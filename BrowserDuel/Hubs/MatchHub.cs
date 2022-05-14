@@ -8,11 +8,13 @@ namespace BrowserDuel.Hubs
     {
         private readonly IMatchMakingService _matchMakingService;
         private readonly IAccountRepo _accountRepo;
+        private readonly IMatchManager _matchManager;
 
-        public MatchHub(IMatchMakingService matchMakingService, IAccountRepo accountRepo)
+        public MatchHub(IMatchMakingService matchMakingService, IAccountRepo accountRepo, IMatchManager matchManager)
         {
             _matchMakingService = matchMakingService;
             _accountRepo = accountRepo;
+            _matchManager = matchManager;
         }
 
         public async override Task OnConnectedAsync()
@@ -20,6 +22,7 @@ namespace BrowserDuel.Hubs
             await base.OnConnectedAsync();
             // do other things here
             Console.WriteLine($"Connection: {Context.ConnectionId}");
+            await Clients.Caller.Connected("success");
         }
 
         // add player to match queue

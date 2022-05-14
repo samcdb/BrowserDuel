@@ -8,7 +8,7 @@ namespace BrowserDuel.Services
         public async Task<Account> GetAccount(Guid id)
         {
             // TODO: link to database
-            return new Account() { Id = id, Elo = 1500};
+            return new Account() { Id = id, Elo = 1500, Name = "Enemy123"};
         }
     }
 }

@@ -10,11 +10,12 @@ public class BrowserDuel
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        // dependency injection
-        builder.Services.AddSingleton<IMatchMakingService, MatchMakingService>();
-        builder.Services.AddSingleton<IAccountRepo, AccountRepo>();
         builder.Services.AddControllers();
         builder.Services.AddSignalR();
+
+        builder.Services.AddSingleton<IMatchMakingService, MatchMakingService>();
+        builder.Services.AddSingleton<IMatchManager, MatchManager>();
+        builder.Services.AddSingleton<IAccountRepo, AccountRepo>();
 
         string corsPolicy = "BrowserDuel";
         builder.Services.AddCors(options =>

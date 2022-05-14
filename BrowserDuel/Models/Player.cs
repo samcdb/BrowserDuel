@@ -4,6 +4,7 @@
     {
         private int _health = 100;
         public string ConnectionId { get; }
+        public string Name { get; }
         public Guid AccountId { get; }
         public int Elo { get; }
         public int Health { get => _health; set => _health = value; }
@@ -13,7 +14,8 @@
         public Player(string connectionId, Account playerAccount)
         {
             ConnectionId = connectionId;
-            (AccountId, Elo) = playerAccount;
+            (AccountId, Elo, Name) = playerAccount;
+            Name = playerAccount.Name;
         }
     }
 }

@@ -13,7 +13,7 @@ namespace BrowserDuel.Services
     {
         private readonly IMatchMakingService _matchMakingService;
         private readonly IHubContext<MatchHub, IMatchClient> _matchHubContext;
-        private Dictionary<Guid, Match> _matchCache;
+        private Dictionary<Guid, Match> _activeMatchCache;
 
         public MatchManager(IMatchMakingService matchMakingService, IHubContext<MatchHub, IMatchClient> matchHubContext)
         {
@@ -21,7 +21,7 @@ namespace BrowserDuel.Services
             _matchHubContext = matchHubContext;
             _matchMakingService.MatchFound += MatchFoundEventHandler;
 
-            _matchCache = new Dictionary<Guid, Match>();
+            _activeMatchCache = new Dictionary<Guid, Match>();
         }
 
         public Task ProcessReactionClickResult(string connectionId, long timeTaken)
@@ -42,11 +42,7 @@ namespace BrowserDuel.Services
                 .Select(player => _matchHubContext.Clients.GroupExcept(groupId, new string[] { player.ConnectionId })
                     .MatchFound(new MatchFoundDto { Id = newMatch.Id.ToString(), EnemyName =  newMatch.GetOtherPlayer(player.ConnectionId).Name}))
                 );
-            
+            _activeMatchCache[newMatch.Id] = newMatch;
         }
-
-        // send to group
-
-        // send to
     }
 }

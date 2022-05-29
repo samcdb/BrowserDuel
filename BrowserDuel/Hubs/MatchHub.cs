@@ -31,5 +31,11 @@ namespace BrowserDuel.Hubs
             Account playerAccount = await _accountRepo.GetAccount(new Guid(accountId));
             _matchMakingService.AddToQueue(new Player(Context.ConnectionId, playerAccount));
         }
+
+        public async Task PlayerReady(string matchId)
+        {
+            Console.WriteLine($"MatchHub.PlayerReady - Player Ready: {Context.ConnectionId} Thread: {Thread.CurrentThread.ManagedThreadId}");
+            await _matchManager.SetPlayerReady(matchId, Context.ConnectionId);
+        }
     }
 }

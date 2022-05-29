@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.SignalR;
 using BrowserDuel.Hubs;
 using BrowserDuel.Models;
 using BrowserDuel.Models.DataTransfer;
+using BrowserDuel.Enums;
+using BrowserDuel.Models.Games;
 
 namespace BrowserDuel.Services
 {
@@ -24,9 +26,45 @@ namespace BrowserDuel.Services
             _activeMatchCache = new Dictionary<Guid, Match>();
         }
 
-        public Task ProcessReactionClickResult(string connectionId, long timeTaken)
+        public Task ProcessReactionClickResult(string connectionId, int timeTaken)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task SetPlayerReady(string matchId, string connectionId)
+        {
+            Match match = _activeMatchCache[Guid.Parse(matchId)];
+
+            // set player to be ready - if other player is ready then start next game
+            bool bothPlayersReady = match.ReadyForNextGame(connectionId);
+
+            if (bothPlayersReady)
+            {
+                Console.WriteLine("Starting next game");
+                await StartNextGame(match);
+            }
+        }
+
+        private async Task StartNextGame(Match match)
+        {
+            // tell match object to decide on next game and update its state
+            match.NextGame();
+
+            switch (match.CurrentGameType)
+            {
+                case GameType.ReactionClick:
+                    ReactionClickGame currentGame = match.ReactionClickGame;
+                    ReactionClickGameDto reactionClickGameDto = new ReactionClickGameDto
+                    {
+                        TimeUntilScreen = currentGame.TimeUntilScreen
+                    };
+
+                    await _matchHubContext.Clients.Group(match.Id.ToString())
+                        .StartReactionClickGame(reactionClickGameDto);
+
+                    break;
+            }
+
         }
 
         private async void MatchFoundEventHandler(object sender, MatchFoundEventArgs e)
@@ -44,5 +82,6 @@ namespace BrowserDuel.Services
                 );
             _activeMatchCache[newMatch.Id] = newMatch;
         }
+
     }
 }

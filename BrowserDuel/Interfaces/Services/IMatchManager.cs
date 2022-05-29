@@ -4,6 +4,7 @@
     // 
     public interface IMatchManager
     {
-        Task ProcessReactionClickResult(string connectionId, long timeTaken);
+        Task SetPlayerReady(string matchId, string connectionId);
+        Task ProcessReactionClickResult(string connectionId, int timeTaken);
     }
 }

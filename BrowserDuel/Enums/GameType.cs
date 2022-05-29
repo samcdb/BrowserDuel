@@ -3,7 +3,7 @@
     public enum GameType
     {
         Aim,
-        ReactionScreen,
+        ReactionClick,
         SpeedTyping,
         TicTacToe
     }

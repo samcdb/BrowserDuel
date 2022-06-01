@@ -107,7 +107,7 @@ namespace BrowserDuel.Services
                 return;
             }
 
-            await Task.WhenAll(players.Select(p => _matchHubContext.Clients.GroupExcept(matchId, new string[] { match.GetOtherPlayer(connectionId).ConnectionId })
+            await Task.WhenAll(players.Select(p => _matchHubContext.Clients.GroupExcept(matchId, new string[] { match.GetOtherPlayer(p.ConnectionId).ConnectionId })
                 .UpdateReactionClickGame(new ReactionClickGameUpdateDto
                 {
                     Won = p.ConnectionId == gameState.Winner

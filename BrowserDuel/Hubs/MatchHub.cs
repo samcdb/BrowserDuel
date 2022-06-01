@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using BrowserDuel.Interfaces;
 using BrowserDuel.Models;
+using BrowserDuel.Models.DataTransfer;
 
 namespace BrowserDuel.Hubs
 {
@@ -36,6 +37,17 @@ namespace BrowserDuel.Hubs
         {
             Console.WriteLine($"MatchHub.PlayerReady - Player Ready: {Context.ConnectionId} Thread: {Thread.CurrentThread.ManagedThreadId}");
             await _matchManager.SetPlayerReady(matchId, Context.ConnectionId);
+        }
+
+        // Reaction Click Game
+        public async Task ReactionClickAction(ReactionClickActionDto playerAction)
+        {
+            (string matchId, int timeTaken) = playerAction;
+            string connectionId = Context.ConnectionId;
+
+            Console.WriteLine($"Player click action - connectionId: {connectionId} timeTaken: {timeTaken}");
+
+            await _matchManager.ProcessReactionClickAction(matchId, Context.ConnectionId, timeTaken);
         }
     }
 }

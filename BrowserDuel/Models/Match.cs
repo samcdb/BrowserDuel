@@ -3,7 +3,9 @@ using BrowserDuel.Models.Games;
 
 namespace BrowserDuel.Models
 {
-    // this is purely for maintaining state of match
+    // this is for maintaining state of match
+    // this manages the game lock to avoid data race issues
+    // when updating game state - only return what the MatchManager actually needs to know, winner/loser
     public class Match
     {
         GameType _currentGameType;
@@ -11,7 +13,7 @@ namespace BrowserDuel.Models
         // for instances 
         readonly object _gameLock = new object();
 
-        // games
+        // games - must not be available to MatchManager
         ReactionClickGame _reactionClickGame;
 
         // having difficulty thinking about how to store different kinds of games nicely
@@ -19,10 +21,10 @@ namespace BrowserDuel.Models
         // of them into their own field
 
         public Guid Id { get; }
-        // a match is made up of games
-        public GameType CurrentGameType { get => _currentGameType; }
-        public ReactionClickGame ReactionClickGame { get => _reactionClickGame; }
-        public int GameCounter { get => _gameCounter; }
+        public GameType CurrentGameType => _currentGameType;
+        // getters for game info - avoid returning actual games so that manager cannot edit
+        // reaction click game
+        public int ReactionClickGameSetup => _reactionClickGame.TimeUntilScreen;
         // quick look up n(1) < n(2)
         public Dictionary<string, Player> Players { get; }
 
@@ -75,9 +77,40 @@ namespace BrowserDuel.Models
             if (_gameCounter % 2 == 0)
             {
                 _currentGameType = GameType.Aim;
-            }
+            } 
+        }
+        
+        public ReactionClickGameState UpdateReactionClickGame(string connectionId, int timeTaken)
+        {
+            // lock so that both requests don't set both their times before either have checked whether other has clicked
+            // this results in both returning the same thing - one should short circuit and return not completed
+            lock (_gameLock)
+            {
+                Dictionary<string, int> playerTimes = _reactionClickGame.PlayerTimes;
+                // set a premature click to the max time
+                playerTimes[connectionId] = timeTaken <= 0 ? ReactionClickGame.MAX_TIME : timeTaken;
 
-            
+                Player otherPlayer = GetOtherPlayer(connectionId);
+                bool otherPlayedClicked = playerTimes.TryGetValue(otherPlayer.ConnectionId, out int otherPlayerTime);
+
+                bool completed = false;
+                // other player has not clicked yet
+                if (!otherPlayedClicked)
+                    return new ReactionClickGameState { Completed = completed };
+
+                completed = true;
+                string winner = null;
+
+                if (timeTaken < otherPlayerTime)
+                    winner = connectionId;
+
+                if (timeTaken > otherPlayerTime)
+                    winner = otherPlayer.ConnectionId;
+
+                // otherwise it's a draw
+
+                return new ReactionClickGameState { Winner = winner, Completed = completed };
+            }
         }
 
     }

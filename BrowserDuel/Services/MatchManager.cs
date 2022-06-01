@@ -3,14 +3,17 @@ using BrowserDuel.Events;
 using Microsoft.AspNetCore.SignalR;
 using BrowserDuel.Hubs;
 using BrowserDuel.Models;
+using BrowserDuel.Models.Games;
 using BrowserDuel.Models.DataTransfer;
 using BrowserDuel.Enums;
-using BrowserDuel.Models.Games;
 
 namespace BrowserDuel.Services
 {
     // rules: anything sent to the client must be from a player perspective, don't make the client interpret general match data
     // only talk to clients via group
+    // can only request changes to match state via Match object - it holds the lock
+    // cannot access the games stored by Match - Match handles those and returns what MatchManager needs, otherwise -
+    // MatchManager could be given rights to set things it shouldn't be able to set - eg. ReactionClickGame.PlayerTimes
     public class MatchManager : IMatchManager
     {
         private readonly IMatchMakingService _matchMakingService;
@@ -26,9 +29,21 @@ namespace BrowserDuel.Services
             _activeMatchCache = new Dictionary<Guid, Match>();
         }
 
-        public Task ProcessReactionClickResult(string connectionId, int timeTaken)
+        private async void MatchFoundEventHandler(object sender, MatchFoundEventArgs e)
         {
-            throw new NotImplementedException();
+            Match newMatch = e.NewMatch;
+            string groupId = newMatch.Id.ToString();
+            IEnumerable<Player> players = newMatch.Players.Values;
+            // create group for players
+            await Task.WhenAll(newMatch.Players.Values
+                .Select(player => _matchHubContext.Groups.AddToGroupAsync(player.ConnectionId, groupId)));
+            // send matchFound to players
+            // send enemy name to each player
+            await Task.WhenAll(newMatch.Players.Values
+                .Select(player => _matchHubContext.Clients.GroupExcept(groupId, new string[] { player.ConnectionId })
+                    .MatchFound(new MatchFoundDto { Id = newMatch.Id.ToString(), EnemyName =  newMatch.GetOtherPlayer(player.ConnectionId).Name}))
+                );
+            _activeMatchCache[newMatch.Id] = newMatch;
         }
 
         public async Task SetPlayerReady(string matchId, string connectionId)
@@ -52,13 +67,14 @@ namespace BrowserDuel.Services
 
             switch (match.CurrentGameType)
             {
+                // manager is given info about games - not the games themselves, to avoid having editing power
                 case GameType.ReactionClick:
-                    ReactionClickGame currentGame = match.ReactionClickGame;
+                    int timeUntilScreen = match.ReactionClickGameSetup;
                     ReactionClickGameDto reactionClickGameDto = new ReactionClickGameDto
                     {
-                        TimeUntilScreen = currentGame.TimeUntilScreen
+                        TimeUntilScreen = timeUntilScreen
                     };
-
+                    Console.WriteLine($"Sending start reaction click to match: {match.Id}");
                     await _matchHubContext.Clients.Group(match.Id.ToString())
                         .StartReactionClickGame(reactionClickGameDto);
 
@@ -66,22 +82,37 @@ namespace BrowserDuel.Services
             }
 
         }
-
-        private async void MatchFoundEventHandler(object sender, MatchFoundEventArgs e)
+        public async Task ProcessReactionClickAction(string matchId, string connectionId, int timeTaken)
         {
-            Match newMatch = e.NewMatch;
-            string groupId = newMatch.Id.ToString();
-            // create group for players
-            await Task.WhenAll(newMatch.Players.Values
-                .Select(player => _matchHubContext.Groups.AddToGroupAsync(player.ConnectionId, groupId)));
-            // send matchFound to players
-            // send enemy name to each player
-            await Task.WhenAll(newMatch.Players.Values
-                .Select(player => _matchHubContext.Clients.GroupExcept(groupId, new string[] { player.ConnectionId })
-                    .MatchFound(new MatchFoundDto { Id = newMatch.Id.ToString(), EnemyName =  newMatch.GetOtherPlayer(player.ConnectionId).Name}))
-                );
-            _activeMatchCache[newMatch.Id] = newMatch;
-        }
+            // must let match object handle the update as it handles the lock
+            Match match = _activeMatchCache[Guid.Parse(matchId)];
+            ReactionClickGameState gameState = match.UpdateReactionClickGame(connectionId, timeTaken);
 
+            // other player has not yet clicked
+            if (!gameState.Completed)
+                return;
+
+            IEnumerable<Player> players = match.Players.Values;
+
+            // draw - select this request's player as the winner - maybe something special in future
+            if (gameState.Winner is null)
+            {
+                await Task.WhenAll(players.Select(p => _matchHubContext.Clients.Group(matchId)
+                    .UpdateReactionClickGame(new ReactionClickGameUpdateDto
+                    {
+                        Won = null
+                    })
+                ));
+
+                return;
+            }
+
+            await Task.WhenAll(players.Select(p => _matchHubContext.Clients.GroupExcept(matchId, new string[] { match.GetOtherPlayer(connectionId).ConnectionId })
+                .UpdateReactionClickGame(new ReactionClickGameUpdateDto
+                {
+                    Won = p.ConnectionId == gameState.Winner
+                })
+            ));
+        }
     }
 }

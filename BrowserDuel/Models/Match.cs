@@ -10,21 +10,29 @@ namespace BrowserDuel.Models
     {
         GameType _currentGameType;
         int _gameCounter;
+        // connectionId of player that won the last game
+        string _lastWinner;
         // for instances 
         readonly object _gameLock = new object();
 
         // games - must not be available to MatchManager
         ReactionClickGame _reactionClickGame;
-
+        AimGame _aimGame;
         // having difficulty thinking about how to store different kinds of games nicely
         // they're too different to abstract via an interface but it feels bad hard coding each
         // of them into their own field
 
         public Guid Id { get; }
         public GameType CurrentGameType => _currentGameType;
+
         // getters for game info - avoid returning actual games so that manager cannot edit
-        // reaction click game
         public int ReactionClickGameSetup => _reactionClickGame.TimeUntilScreen;
+        public AimGameSetup AimGameSetup => new AimGameSetup 
+        { 
+            Turns = _aimGame.Turns, 
+            TimeBetweenTurns = _aimGame.TimeBetweenTurns 
+        };
+
         // quick look up n(1) < n(2)
         public Dictionary<string, Player> Players { get; }
 
@@ -74,10 +82,18 @@ namespace BrowserDuel.Models
                 return;
             }
             
+            // every second game is an aim game
             if (_gameCounter % 2 == 0)
             {
                 _currentGameType = GameType.Aim;
+                // game becomes faster as the match goes on
+                int timeBetweenTurns = 2000 - _gameCounter * 80;
+                _aimGame = new AimGame(_lastWinner, GetOtherPlayer(_lastWinner).ConnectionId, timeBetweenTurns);
             } 
+
+            // otherwise randomly choose a game that isn't reaction click or aim
+
+
         }
         
         public ReactionClickGameState UpdateReactionClickGame(string connectionId, int timeTaken)
@@ -108,7 +124,7 @@ namespace BrowserDuel.Models
                     winner = otherPlayer.ConnectionId;
 
                 // otherwise it's a draw
-
+                _lastWinner = winner;
                 return new ReactionClickGameState { Winner = winner, Completed = completed };
             }
         }

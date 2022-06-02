@@ -35,11 +35,11 @@ namespace BrowserDuel.Services
             string groupId = newMatch.Id.ToString();
             IEnumerable<Player> players = newMatch.Players.Values;
             // create group for players
-            await Task.WhenAll(newMatch.Players.Values
+            await Task.WhenAll(players
                 .Select(player => _matchHubContext.Groups.AddToGroupAsync(player.ConnectionId, groupId)));
             // send matchFound to players
             // send enemy name to each player
-            await Task.WhenAll(newMatch.Players.Values
+            await Task.WhenAll(players
                 .Select(player => _matchHubContext.Clients.GroupExcept(groupId, new string[] { player.ConnectionId })
                     .MatchFound(new MatchFoundDto { Id = newMatch.Id.ToString(), EnemyName =  newMatch.GetOtherPlayer(player.ConnectionId).Name}))
                 );
@@ -77,6 +77,31 @@ namespace BrowserDuel.Services
                     Console.WriteLine($"Sending start reaction click to match: {match.Id}");
                     await _matchHubContext.Clients.Group(match.Id.ToString())
                         .StartReactionClickGame(reactionClickGameDto);
+
+                    break;
+
+                case GameType.Aim:
+                    IEnumerable<Player> players = match.Players.Values;
+                    AimGameSetup setup = match.AimGameSetup;
+
+                    Console.WriteLine($"Sending start aim click to match: {match.Id}");
+
+                    await Task.WhenAll(players.Select(p =>
+                    // send to current player - interact via group
+                    _matchHubContext.Clients.GroupExcept(
+                        match.Id.ToString(),
+                        new string[] { match.GetOtherPlayer(p.ConnectionId).ConnectionId })
+                    // set up aim game for this player
+                    .StartAimGame(new AimGameDto 
+                    { 
+                        TimeBetweenTurns = setup.TimeBetweenTurns,
+                        Turns = setup.Turns.Select(t => new AimTokenDto
+                        {
+                            X = t.X,
+                            Y = t.Y,
+                            Attack = p.ConnectionId == t.AttackerId
+                        }).ToArray()
+                    })));
 
                     break;
             }

@@ -8,5 +8,6 @@ namespace BrowserDuel.Interfaces
         Task MatchFound(MatchFoundDto match);
         Task StartReactionClickGame(ReactionClickGameDto reactionClickGame);
         Task UpdateReactionClickGame(ReactionClickGameUpdateDto gameState);
+        Task StartAimGame(AimGameDto aimGame);
     }
 }

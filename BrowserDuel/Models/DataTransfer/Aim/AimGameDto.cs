@@ -3,9 +3,9 @@ using BrowserDuel.Models.DataTransfer;
 
 namespace BrowserDuel.Models.DataTransfer
 {
-    public class AimGameDto
+    public record AimGameDto
     {
-        public IList<AimTokenDto> Turns { get; set; }
+        public List<AimTokenDto> Turns { get; set; }
         public int TimeBetweenTurns { get; set; }
     }
 }

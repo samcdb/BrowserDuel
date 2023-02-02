@@ -100,7 +100,7 @@ namespace BrowserDuel.Services
                             X = t.X,
                             Y = t.Y,
                             Attack = p.ConnectionId == t.AttackerId
-                        }).ToArray()
+                        }).ToList()
                     })));
 
                     break;
@@ -123,7 +123,7 @@ namespace BrowserDuel.Services
             if (gameState.Winner is null)
             {
                 await Task.WhenAll(players.Select(p => _matchHubContext.Clients.Group(matchId)
-                    .UpdateReactionClickGame(new ReactionClickGameUpdateDto
+                    .UpdateReactionClickGame(new ReactionClickUpdateDto
                     {
                         Won = null
                     })
@@ -133,11 +133,19 @@ namespace BrowserDuel.Services
             }
 
             await Task.WhenAll(players.Select(p => _matchHubContext.Clients.GroupExcept(matchId, new string[] { match.GetOtherPlayer(p.ConnectionId).ConnectionId })
-                .UpdateReactionClickGame(new ReactionClickGameUpdateDto
+                .UpdateReactionClickGame(new ReactionClickUpdateDto
                 {
                     Won = p.ConnectionId == gameState.Winner
                 })
             ));
+        }
+
+        public async Task ProcessAimAction(string matchId, string connectionId, int? timeTaken, int index)
+        {
+            Match match = _activeMatchCache[Guid.Parse(matchId)];
+            // 
+            AimGameState gameState = match.UpdateAimGame(connectionId, timeTaken, index);
+
         }
     }
 }

@@ -129,5 +129,18 @@ namespace BrowserDuel.Models
             }
         }
 
+        public AimGameState UpdateAimGame(string connectionId, int? timeTaken, int index)
+        {
+            // check turn array using index
+            // if it is already populated - leave it
+            // TODO: remove the 'already populated check' when client side error is fixed
+            // (a 'no-click' event is sent even if the player clicked)
+
+            lock (_gameLock)
+            {
+                return new AimGameState { };
+            }
+        }
+
     }
 }

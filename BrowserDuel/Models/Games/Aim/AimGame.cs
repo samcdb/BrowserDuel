@@ -4,7 +4,7 @@
     {
         int _timeBetweenTurns;
 
-        public Dictionary<string, int> PlayerTimes { get; set; }
+        public Dictionary<string, int[]> PlayerTimes { get; set; }
         public IList<AimToken> Turns { get; }
         public int TimeBetweenTurns => _timeBetweenTurns;
 
@@ -16,6 +16,11 @@
             if (numberOfTurns % 2 == 1)
                 numberOfTurns++;
 
+            PlayerTimes = new Dictionary<string, int[]> 
+            { 
+                { playerOne, new int[numberOfTurns] },
+                { playerTwo, new int[numberOfTurns] }
+            };
             Turns = new AimToken[numberOfTurns];
 
             for (int i = 0; i < numberOfTurns; i++)

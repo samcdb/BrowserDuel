@@ -42,12 +42,27 @@ namespace BrowserDuel.Hubs
         // Reaction Click Game
         public async Task ReactionClickAction(ReactionClickActionDto playerAction)
         {
-            (string matchId, int timeTaken) = playerAction;
+            string matchId = playerAction.MatchId;
+            int timeTaken = playerAction.TimeTaken; ;
             string connectionId = Context.ConnectionId;
 
             Console.WriteLine($"Player click action - connectionId: {connectionId} timeTaken: {timeTaken}");
 
             await _matchManager.ProcessReactionClickAction(matchId, Context.ConnectionId, timeTaken);
+        }
+
+        // Aim Game
+        // process a player's click
+        public async Task AimAction(AimActionDto playerAction)
+        {
+            string matchId = playerAction.MatchId;
+            int? timeTaken= playerAction.TimeTaken;
+            int index= playerAction.Index;
+            string connectionId = Context.ConnectionId;
+
+            Console.WriteLine($"Player aim action - connectionId: {connectionId} timeTaken: {timeTaken} index: {index}");
+
+            await _matchManager.ProcessAimAction(matchId, Context.ConnectionId, timeTaken, index);
         }
     }
 }

@@ -6,6 +6,6 @@
     {
         Task SetPlayerReady(string matchId, string connectionId);
         Task ProcessReactionClickAction(string matchId, string connectionId, int timeTaken);
-        Task ProcessAimAction(string matchId, string connectionId, int? timeTaken, int index);
+        Task ProcessAimAction(string matchId, string connectionId, int? timeTaken);
     }
 }

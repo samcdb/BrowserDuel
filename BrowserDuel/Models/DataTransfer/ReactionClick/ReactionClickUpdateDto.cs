@@ -1,7 +1,9 @@
-﻿namespace BrowserDuel.Models.DataTransfer
+﻿using BrowserDuel.Models.Games;
+
+namespace BrowserDuel.Models.DataTransfer
 {
     public record ReactionClickUpdateDto
     {
-        public bool? Won { get; set; }// null if draw
+        public bool? Won { get; set; } // null if draw
     }
 }

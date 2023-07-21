@@ -3,10 +3,14 @@
     public class AimGame
     {
         int _timeBetweenTurns;
+        int _turnCount = 0;
 
         public Dictionary<string, int[]> PlayerTimes { get; set; }
         public IList<AimToken> Turns { get; }
         public int TimeBetweenTurns => _timeBetweenTurns;
+
+        public int TurnCount => _turnCount;
+        public int IncrementTurnCount() => ++_turnCount;
 
         public AimGame(string playerOne, string playerTwo, int timeBetweenTurns)
         {

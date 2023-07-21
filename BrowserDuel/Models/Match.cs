@@ -89,25 +89,25 @@ namespace BrowserDuel.Models
                 // game becomes faster as the match goes on
                 int timeBetweenTurns = 2000 - _gameCounter * 80;
                 _aimGame = new AimGame(_lastWinner, GetOtherPlayer(_lastWinner).ConnectionId, timeBetweenTurns);
-            } 
+                return;
+            }
 
             // otherwise randomly choose a game that isn't reaction click or aim
-
-
+            _currentGameType = GameType.ReactionClick;
+            _reactionClickGame = new ReactionClickGame();
         }
         
-        public ReactionClickGameState UpdateReactionClickGame(string connectionId, int timeTaken)
+        public ReactionClickGameState UpdateReactionClickGameState(string connectionId, int timeTaken)
         {
             // lock so that both requests don't set both their times before either have checked whether other has clicked
-            // this results in both returning the same thing - one should short circuit and return not completed
+            // this results in both returning the same thing
             lock (_gameLock)
             {
-                Dictionary<string, int> playerTimes = _reactionClickGame.PlayerTimes;
                 // set a premature click to the max time
-                playerTimes[connectionId] = timeTaken <= 0 ? ReactionClickGame.MAX_TIME : timeTaken;
+                _reactionClickGame.PlayerTimes[connectionId] = timeTaken <= 0 ? ReactionClickGame.MAX_TIME : timeTaken;
 
                 Player otherPlayer = GetOtherPlayer(connectionId);
-                bool otherPlayedClicked = playerTimes.TryGetValue(otherPlayer.ConnectionId, out int otherPlayerTime);
+                bool otherPlayedClicked = _reactionClickGame.PlayerTimes.TryGetValue(otherPlayer.ConnectionId, out int otherPlayerTime);
 
                 bool completed = false;
                 // other player has not clicked yet
@@ -129,18 +129,56 @@ namespace BrowserDuel.Models
             }
         }
 
-        public AimGameState UpdateAimGame(string connectionId, int? timeTaken, int index)
-        {
-            // check turn array using index
-            // if it is already populated - leave it
-            // TODO: remove the 'already populated check' when client side error is fixed
-            // (a 'no-click' event is sent even if the player clicked)
 
+
+        // receive aim action (could be a noAction)
+        public AimGameState UpdateAimGameState(string connectionId, int? timeTaken)
+        {
             lock (_gameLock)
             {
-                return new AimGameState { };
+                int[] currentPlayerTimes =_aimGame.PlayerTimes[connectionId];
+
+                // player did not act - set to max possible time
+                if (timeTaken is null)
+                {
+                    currentPlayerTimes[_aimGame.TurnCount] = _aimGame.TimeBetweenTurns;
+                }
+
+                string otherPlayerId = GetOtherPlayer(connectionId).ConnectionId;
+                int otherPlayerTime = _aimGame.PlayerTimes[otherPlayerId][_aimGame.TurnCount];
+
+                // other player action not yet received
+                if (otherPlayerTime == 0)
+                {
+                    // can't do anything yet
+                    return null;
+                }
+
+                // in case of a tie, worse ping wins!
+                string turnWinnerId = timeTaken <= otherPlayerTime ? connectionId : otherPlayerId;
+                int winnerHealth = Players[turnWinnerId].Health;
+                // loser has health deducted
+                string turnLoserId = GetOtherPlayer(turnWinnerId).ConnectionId;
+                int loserHealth = Players[turnLoserId].Health -= 10;
+
+                // ensure match state is updated
+                Dictionary<string, int> playerHealth = UpdateHealth(turnWinnerId, winnerHealth, turnLoserId, loserHealth);
+                _aimGame.IncrementTurnCount();
+
+                return new AimGameState
+                {
+                    Winner = turnWinnerId,
+                    PlayerHealth = playerHealth
+                };
             }
         }
 
+        private Dictionary<string, int> UpdateHealth(string player1Id, int player1Hp, string player2Id, int player2Hp)
+        {
+            Players[player1Id].Health = player1Hp;
+            Players[player2Id].Health = player2Hp;
+
+            return new Dictionary<string, int> { { player1Id, player1Hp }, { player2Id, player2Hp } };
+        }
     }
 }

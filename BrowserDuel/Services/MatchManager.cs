@@ -65,6 +65,7 @@ namespace BrowserDuel.Services
             // tell match object to decide on next game and update its state
             match.NextGame();
 
+            // TODO: all this logic should be in match.NextGame() 
             switch (match.CurrentGameType)
             {
                 // manager is given info about games - not the games themselves, to avoid having editing power
@@ -111,7 +112,7 @@ namespace BrowserDuel.Services
         {
             // must let match object handle the update as it handles the lock
             Match match = _activeMatchCache[Guid.Parse(matchId)];
-            ReactionClickGameState gameState = match.UpdateReactionClickGame(connectionId, timeTaken);
+            ReactionClickGameState gameState = match.UpdateReactionClickGameState(connectionId, timeTaken);
 
             // other player has not yet clicked
             if (!gameState.Completed)
@@ -140,12 +141,24 @@ namespace BrowserDuel.Services
             ));
         }
 
-        public async Task ProcessAimAction(string matchId, string connectionId, int? timeTaken, int index)
+        public async Task ProcessAimAction(string matchId, string connectionId, int? timeTaken)
         {
             Match match = _activeMatchCache[Guid.Parse(matchId)];
-            // 
-            AimGameState gameState = match.UpdateAimGame(connectionId, timeTaken, index);
+            AimGameState gameState = match.UpdateAimGameState(connectionId, timeTaken);
 
+            if (gameState is null)
+            {
+                return;
+            }
+
+            IEnumerable<Player> players = match.Players.Values;
+            await Task.WhenAll(players.Select(p => _matchHubContext.Clients.GroupExcept(matchId, new string[] { match.GetOtherPlayer(p.ConnectionId).ConnectionId })
+              .UpdateAimGame(new AimUpdateDto
+              {
+                  Won = p.ConnectionId == gameState.Winner,
+                  PlayerHealth = gameState.PlayerHealth
+              })
+          ));
         }
     }
 }

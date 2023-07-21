@@ -9,5 +9,6 @@ namespace BrowserDuel.Interfaces
         Task StartReactionClickGame(ReactionClickGameDto reactionClickGame);
         Task UpdateReactionClickGame(ReactionClickUpdateDto gameState);
         Task StartAimGame(AimGameDto aimGame);
+        Task UpdateAimGame(AimUpdateDto gameState);
     }
 }

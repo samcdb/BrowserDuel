@@ -57,12 +57,11 @@ namespace BrowserDuel.Hubs
         {
             string matchId = playerAction.MatchId;
             int? timeTaken= playerAction.TimeTaken;
-            int index= playerAction.Index;
             string connectionId = Context.ConnectionId;
 
-            Console.WriteLine($"Player aim action - connectionId: {connectionId} timeTaken: {timeTaken} index: {index}");
+            Console.WriteLine($"Player aim action - connectionId: {connectionId} timeTaken: {timeTaken}");
 
-            await _matchManager.ProcessAimAction(matchId, Context.ConnectionId, timeTaken, index);
+            await _matchManager.ProcessAimAction(matchId, Context.ConnectionId, timeTaken);
         }
     }
 }
